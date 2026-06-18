@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora Interactiva Premium</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: '#0f172a',
+                        darkCard: '#1e293b',
+                        lightBg: '#f8fafc',
+                        lightCard: '#ffffff',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons for premium modern look -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        /* Custom scrollbar for history panel */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 2px;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="bg-lightBg dark:bg-darkBg text-slate-800 dark:text-slate-100 min-h-screen flex items-center justify-center p-4">
+
+    <!-- Main Container -->
+    <div class="w-full max-w-lg bg-lightCard dark:bg-darkCard rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 transition-all duration-300 relative">
+        
+        <!-- Header / Control Panel -->
+        <div class="p-4 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
+            <span class="font-bold tracking-wider text-sm text-indigo-600 dark:text-indigo-400">CALC v2.0</span>
+            
+            <div class="flex items-center gap-3">
+                <!-- Toggle History Button -->
+                <button onclick="toggleHistory()" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition" title="Ver Historial">
+                    <i data-lucide="history" class="w-5 h-5"></i>
+                </button>
+                
+                <!-- Toggle Scientific Mode -->
+                <button onclick="toggleScientific()" id="scientific-btn" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition" title="Modo Científico">
+                    <i data-lucide="binary" class="w-5 h-5 text-indigo-500"></i>
+                </button>
+
+                <!-- Light/Dark Mode Toggle -->
+                <button onclick="toggleTheme()" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition" title="Cambiar Tema">
+                    <i id="theme-icon" data-lucide="sun" class="w-5 h-5 block dark:hidden"></i>
+                    <i id="theme-icon-dark" data-lucide="moon" class="w-5 h-5 hidden dark:block"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Calculator Screen -->
+        <div class="p-6 bg-slate-50/50 dark:bg-slate-900/40 text-right relative min-h-[140px] flex flex-col justify-end border-b border-slate-100 dark:border-slate-800">
+            <!-- Expression/Formula -->
+            <div id="expression" class="text-sm md:text-base text-slate-400 dark:text-slate-500 min-h-[20px] break-all tracking-wide font-light"></div>
+            <!-- Main Output Display -->
+            <div class="flex items-center justify-between mt-1">
+                <!-- Copy button -->
+                <button onclick="copyToClipboard()" class="p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-800 transition-all group" title="Copiar Resultado">
+                    <i data-lucide="copy" class="w-4 h-4 text-slate-400 group-hover:text-indigo-500 transition-colors"></i>
+                </button>
+                <div id="display" class="text-3xl md:text-4xl font-semibold tracking-tight truncate max-w-[90%] select-all">0</div>
+            </div>
+            
+            <!-- Notification toast inside screen -->
+            <div id="toast" class="absolute left-6 bottom-4 bg-indigo-600 text-white text-xs px-2.5 py-1 rounded-md opacity-0 pointer-events-none transition-all duration-300 transform translate-y-2">
+                ¡Copiado!
+            </div>
+        </div>
+
+        <!-- Sliding History Panel -->
+        <div id="history-panel" class="absolute left-0 right-0 top-[57px] bottom-0 bg-lightCard dark:bg-darkCard z-10 p-6 flex flex-col transform translate-x-full transition-transform duration-300">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-lg flex items-center gap-2">
+                    <i data-lucide="history" class="w-5 h-5 text-indigo-500"></i> Historial
+                </h3>
+                <button onclick="clearHistory()" class="text-xs text-red-500 hover:text-red-600 font-medium flex items-center gap-1">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Limpiar Todo
+                </button>
+            </div>
+            <!-- History List -->
+            <div id="history-list" class="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
+                <div class="text-center text-slate-400 dark:text-slate-500 py-10 text-sm">
+                    No hay cálculos recientes.
+                </div>
+            </div>
+            <button onclick="toggleHistory()" class="mt-4 w-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 py-2.5 rounded-xl font-medium text-sm transition">
+                Cerrar Historial
+            </button>
+        </div>
+
+        <!-- Scientific Extension (Toggled) -->
+        <div id="scientific-panel" class="hidden grid grid-cols-5 gap-2 p-6 pb-2 bg-indigo-50/30 dark:bg-slate-900/20 border-b border-slate-100 dark:border-slate-800">
+            <button onclick="scientificOp('sin')" class="p-3 bg-indigo-100/50 hover:bg-indigo-100 dark:bg-indigo-950/20 dark:hover:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-xl text-xs font-bold transition">sin</button>
+            <button onclick="scientificOp('cos')" class="p-3 bg-indigo-100/50 hover:bg-indigo-100 dark:bg-indigo-950/20 dark:hover:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-xl text-xs font-bold transition">cos</button>
+            <button onclick="scientificOp('tan')" class="p-3 bg-indigo-100/50 hover:bg-indigo-100 dark:bg-indigo-950/20 dark:hover:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-xl text-xs font-bold transition">tan</button>
+            <button onclick="scientificOp('sqrt')" class="p-3 bg-indigo-100/50 hover:bg-indigo-100 dark:bg-indigo-950/20 dark:hover:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-xl text-xs font-bold transition">√x</button>
+            <button onclick="appendOperator('**')" class="p-3 bg-indigo-100/50 hover:bg-indigo-100 dark:bg-indigo-950/20 dark:hover:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-xl text-xs font-bold transition">xʸ</button>
+            
+            <button onclick="scientificOp('log')" class="p-3 bg-indigo-100/50 hover:bg-indigo-100 dark:bg-indigo-950/20 dark:hover:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-xl text-xs font-bold transition">log</button>
+            <button onclick="scientificOp('ln')" class="p-3 bg-indigo-100/50 hover:bg-indigo-100 dark:bg-indigo-950/20 dark:hover:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-xl text-xs font-bold transition">ln</button>
+            <button onclick="appendNumber('Math.PI')" class="p-3 bg-indigo-100/50 hover:bg-indigo-100 dark:bg-indigo-950/20 dark:hover:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-xl text-xs font-bold transition">π</button>
+            <button onclick="appendNumber('Math.E')" class="p-3 bg-indigo-100/50 hover:bg-indigo-100 dark:bg-indigo-950/20 dark:hover:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-xl text-xs font-bold transition">e</button>
+            <button onclick="appendBracket('(')" class="p-3 bg-indigo-100/50 hover:bg-indigo-100 dark:bg-indigo-950/20 dark:hover:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-xl text-xs font-bold transition">(</button>
+        </div>
+
+        <!-- Keypad -->
+        <div class="p-6 grid grid-cols-4 gap-3 bg-lightCard dark:bg-darkCard">
+            <!-- Row 1 -->
+            <button onclick="clearAll()" class="col-span-2 p-4 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-950/30 text-rose-500 font-bold rounded-2xl transition duration-150">C</button>
+            <button onclick="backspace()" class="p-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-2xl transition duration-150 flex items-center justify-center">
+                <i data-lucide="delete" class="w-5 h-5"></i>
+            </button>
+            <button onclick="appendOperator('/')" class="p-4 bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 font-bold rounded-2xl text-xl transition duration-150">/</button>
+
+            <!-- Row 2 -->
+            <button onclick="appendNumber('7')" class="p-4 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/40 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold rounded-2xl text-lg transition duration-150">7</button>
+            <button onclick="appendNumber('8')" class="p-4 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/40 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold rounded-2xl text-lg transition duration-150">8</button>
+            <button onclick="appendNumber('9')" class="p-4 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/40 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold rounded-2xl text-lg transition duration-150">9</button>
+            <button onclick="appendOperator('*')" class="p-4 bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 font-bold rounded-2xl text-xl transition duration-150">×</button>
+
+            <!-- Row 3 -->
+            <button onclick="appendNumber('4')" class="p-4 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/40 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold rounded-2xl text-lg transition duration-150">4</button>
+            <button onclick="appendNumber('5')" class="p-4 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/40 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold rounded-2xl text-lg transition duration-150">5</button>
+            <button onclick="appendNumber('6')" class="p-4 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/40 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold rounded-2xl text-lg transition duration-150">6</button>
+            <button onclick="appendOperator('-')" class="p-4 bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 font-bold rounded-2xl text-xl transition duration-150">−</button>
+
+            <!-- Row 4 -->
+            <button onclick="appendNumber('1')" class="p-4 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/40 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold rounded-2xl text-lg transition duration-150">1</button>
+            <button onclick="appendNumber('2')" class="p-4 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/40 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold rounded-2xl text-lg transition duration-150">2</button>
+            <button onclick="appendNumber('3')" class="p-4 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/40 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold rounded-2xl text-lg transition duration-150">3</button>
+            <button onclick="appendOperator('+')" class="p-4 bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 font-bold rounded-2xl text-xl transition duration-150">+</button>
+
+            <!-- Row 5 -->
+            <button onclick="appendNumber('0')" class="col-span-2 p-4 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/40 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold rounded-2xl text-lg transition duration-150">0</button>
+            <button onclick="appendNumber('.')" class="p-4 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/40 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold rounded-2xl text-lg transition duration-150">.</button>
+            <button onclick="calculate()" class="p-4 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold rounded-2xl text-xl shadow-lg shadow-indigo-500/30 transition duration-150">=</button>
+        </div>
+    </div>
+
+    <!-- Script Block -->
+    <script>
+        // Inicializar iconos de Lucide
+        lucide.createIcons();
+
+        const display = document.getElementById('display');
+        const expressionDiv = document.getElementById('expression');
+        const historyList = document.getElementById('history-list');
+        const scientificPanel = document.getElementById('scientific-panel');
+        const historyPanel = document.getElementById('history-panel');
+
+        let currentInput = '';
+        let fullExpression = '';
+        let isEvaluated = false;
+        let history = [];
+
+        // Cambiar entre Modo Claro y Oscuro
+        function toggleTheme() {
+            document.documentElement.classList.toggle('dark');
+        }
+
+        // Mostrar u Ocultar funciones científicas
+        function toggleScientific() {
+            const btn = document.getElementById('scientific-btn');
+            scientificPanel.classList.toggle('hidden');
+            btn.classList.toggle('bg-indigo-100');
+            btn.classList.toggle('dark:bg-slate-700');
+        }
+
+        // Mostrar u Ocultar Panel de Historial
+        function toggleHistory() {
+            historyPanel.classList.toggle('translate-x-full');
+            renderHistory();
+        }
+
+        // Añadir números al cálculo
+        function appendNumber(num) {
+            if (isEvaluated) {
+                currentInput = '';
+                fullExpression = '';
+                isEvaluated = false;
+            }
+
+            // Evitar múltiples puntos decimales en el número actual
+            if (num === '.' && currentInput.includes('.')) return;
+
+            // Formatear visualización de constantes matemáticas
+            if (num === 'Math.PI') {
+                currentInput += 'π';
+                fullExpression += 'Math.PI';
+            } else if (num === 'Math.E') {
+                currentInput += 'e';
+                fullExpression += 'Math.E';
+            } else {
+                currentInput += num;
+                fullExpression += num;
+            }
+
+            updateDisplay();
+        }
+
+        // Añadir Paréntesis o Brackets
+        function appendBracket(bracket) {
+            if (isEvaluated) {
+                fullExpression = '';
+                isEvaluated = false;
+            }
+            currentInput += bracket;
+            fullExpression += bracket;
+            updateDisplay();
+        }
+
+        // Añadir operadores (+, -, *, /)
+        function appendOperator(op) {
+            if (isEvaluated) {
+                isEvaluated = false;
+            }
+
+            const lastChar = fullExpression.slice(-1);
+            
+            // Si el último carácter es un operador, lo reemplaza
+            if (['+', '-', '*', '/', '**'].includes(lastChar) && op !== '-') {
+                // Control especial para el exponente **
+                if (fullExpression.endsWith('**')) {
+                    fullExpression = fullExpression.slice(0, -2) + op;
+                } else {
+                    fullExpression = fullExpression.slice(0, -1) + op;
+                }
+            } else {
+                // Si la expresión está vacía y se presiona un operador, no se añade a menos que sea menos (-)
+                if (fullExpression === '' && op !== '-') return;
+                fullExpression += op;
+            }
+            
+            currentInput = '';
+            updateDisplay();
+        }
+
+        // Funciones científicas de cálculo directo
+        function scientificOp(func) {
+            if (fullExpression === '') return;
+            let currentVal = evalExpression(fullExpression);
+            
+            if (isNaN(currentVal) || currentVal === 'Error') {
+                display.innerText = 'Error';
+                return;
+            }
+
+            let result;
+            let label = '';
+            switch(func) {
+                case 'sin':
+                    result = Math.sin(currentVal * Math.PI / 180); // Conversión a Radianes
+                    label = `sin(${currentVal})`;
+                    break;
+                case 'cos':
+                    result = Math.cos(currentVal * Math.PI / 180);
+                    label = `cos(${currentVal})`;
+                    break;
+                case 'tan':
+                    result = Math.tan(currentVal * Math.PI / 180);
+                    label = `tan(${currentVal})`;
+                    break;
+                case 'sqrt':
+                    result = Math.sqrt(currentVal);
+                    label = `√(${currentVal})`;
+                    break;
+                case 'log':
+                    result = Math.log10(currentVal);
+                    label = `log(${currentVal})`;
+                    break;
+                case 'ln':
+                    result = Math.log(currentVal);
+                    label = `ln(${currentVal})`;
+                    break;
+            }
+
+            // Redondear para evitar decimales flotantes imprecisos de JS
+            result = Math.round(result * 100000000) / 100000000;
+
+            expressionDiv.innerText = label;
+            display.innerText = result;
+            
+            // Guardar en el historial
+            addToHistory(label, result);
+
+            fullExpression = result.toString();
+            currentInput = result.toString();
+            isEvaluated = true;
+        }
+
+        // Limpiar toda la pantalla
+        function clearAll() {
+            currentInput = '';
+            fullExpression = '';
+            display.innerText = '0';
+            expressionDiv.innerText = '';
+            isEvaluated = false;
+        }
+
+        // Borrar el último carácter (Backspace)
+        function backspace() {
+            if (isEvaluated) return;
+            fullExpression = fullExpression.trim();
+            
+            if (fullExpression.endsWith('Math.PI')) {
+                fullExpression = fullExpression.slice(0, -7);
+                currentInput = currentInput.slice(0, -1);
+            } else if (fullExpression.endsWith('Math.E')) {
+                fullExpression = fullExpression.slice(0, -6);
+                currentInput = currentInput.slice(0, -1);
+            } else {
+                fullExpression = fullExpression.slice(0, -1);
+                currentInput = currentInput.slice(0, -1);
+            }
+            
+            updateDisplay();
+        }
+
+        // Ejecutar cálculo matemático
+        function calculate() {
+            if (fullExpression === '') return;
+
+            // Arreglar paréntesis no cerrados automáticamente para evitar errores
+            let openBrackets = (fullExpression.match(/\(/g) || []).length;
+            let closeBrackets = (fullExpression.match(/\)/g) || []).length;
+            while (openBrackets > closeBrackets) {
+                fullExpression += ')';
+                openBrackets--;
+            }
+
+            let rawResult = evalExpression(fullExpression);
+            
+            if (rawResult === 'Error' || isNaN(rawResult)) {
+                display.innerText = 'Error';
+                expressionDiv.innerText = '';
+                fullExpression = '';
+                currentInput = '';
+            } else {
+                // Redondear el resultado para evitar errores flotantes tipo 0.1 + 0.2
+                let finalResult = Number(Math.round(rawResult + 'e+12') + 'e-12');
+                
+                // Formatear visualmente el historial
+                let visualExpression = fullExpression
+                    .replace(/\*/g, '×')
+                    .replace(/\//g, '÷')
+                    .replace(/Math.PI/g, 'π')
+                    .replace(/Math.E/g, 'e');
+
+                expressionDiv.innerText = visualExpression + ' =';
+                display.innerText = finalResult;
+
+                addToHistory(visualExpression, finalResult);
+
+                fullExpression = finalResult.toString();
+                currentInput = finalResult.toString();
+                isEvaluated = true;
+            }
+        }
+
+        // Función interna segura para evaluar la expresión
+        function evalExpression(expr) {
+            try {
+                // Evaluamos de forma controlada y segura
+                return Function(`"use strict"; return (${expr})`)();
+            } catch (err) {
+                return 'Error';
+            }
+        }
+
+        // Actualizar lo que se ve en la pantalla
+        function updateDisplay() {
+            // Reemplaza símbolos internos por símbolos amigables al usuario
+            let displayExpr = fullExpression
+                .replace(/\*\*/g, '^')
+                .replace(/\*/g, ' × ')
+                .replace(/\//g, ' ÷ ')
+                .replace(/\+/g, ' + ')
+                .replace(/\-/g, ' − ')
+                .replace(/Math.PI/g, 'π')
+                .replace(/Math.E/g, 'e');
+
+            display.innerText = currentInput === '' ? '0' : currentInput.replace(/Math.PI/g, 'π').replace(/Math.E/g, 'e');
+            expressionDiv.innerText = displayExpr;
+        }
+
+        // Copiar el resultado actual en pantalla al portapapeles
+        function copyToClipboard() {
+            const textToCopy = display.innerText;
+            if (textToCopy === '0' || textToCopy === 'Error') return;
+
+            // Método fallback universal de portapapeles para navegadores e iframes
+            const tempTextArea = document.createElement('textarea');
+            tempTextArea.value = textToCopy;
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempTextArea);
+
+            // Mostrar notificación
+            const toast = document.getElementById('toast');
+            toast.classList.remove('opacity-0', 'translate-y-2');
+            toast.classList.add('opacity-100', 'translate-y-0');
+            
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                toast.classList.remove('opacity-100', 'translate-y-0');
+            }, 1800);
+        }
+
+        // Gestionar el Historial de Cálculos
+        function addToHistory(expr, result) {
+            history.unshift({ expr, result });
+            if (history.length > 30) history.pop(); // Mantener un límite de 30 elementos
+        }
+
+        function renderHistory() {
+            if (history.length === 0) {
+                historyList.innerHTML = `
+                    <div class="text-center text-slate-400 dark:text-slate-500 py-10 text-sm">
+                        No hay cálculos recientes.
+                    </div>
+                `;
+                return;
+            }
+
+            historyList.innerHTML = history.map((item, index) => `
+                <div onclick="applyHistoryItem(${index})" class="p-3 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl cursor-pointer transition text-right border border-slate-100 dark:border-slate-800/40">
+                    <div class="text-xs text-slate-400 dark:text-slate-500 break-all">${item.expr}</div>
+                    <div class="text-base font-semibold text-indigo-600 dark:text-indigo-400 mt-0.5">${item.result}</div>
+                </div>
+            `).join('');
+        }
+
+        function applyHistoryItem(index) {
+            const item = history[index];
+            fullExpression = item.result.toString();
+            currentInput = item.result.toString();
+            expressionDiv.innerText = `${item.expr} ${item.result}`;
+            display.innerText = item.result;
+            isEvaluated = true;
+            toggleHistory(); // Cerrar el panel
+        }
+
+        function clearHistory() {
+            history = [];
+            renderHistory();
+        }
+
+        // Soporte de Teclado Físico
+        document.addEventListener('keydown', (event) => {
+            const key = event.key;
+
+            if (/[0-9]/.test(key)) {
+                appendNumber(key);
+            } else if (key === '.') {
+                appendNumber('.');
+            } else if (key === '+' || key === '-' || key === '*' || key === '/') {
+                appendOperator(key);
+            } else if (key === 'Enter' || key === '=') {
+                event.preventDefault(); // Evitar comportamientos por defecto
+                calculate();
+            } else if (key === 'Backspace') {
+                backspace();
+            } else if (key === 'Escape' || key === 'c' || key === 'C') {
+                clearAll();
+            }
+        });
+    </script>
+</body>
+</html>
